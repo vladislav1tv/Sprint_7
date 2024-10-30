@@ -6,7 +6,8 @@ import io.restassured.http.ContentType;
 import org.junit.Test;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.*;  // Импортируйте все статические методы из Matchers
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ListOrdersTest {
     public final String BASE_URI = "https://qa-scooter.praktikum-services.ru";
@@ -22,6 +23,9 @@ public class ListOrdersTest {
                 .get(GET_ORDERS)
                 .then()
                 .statusCode(200)
-                .body("orders", notNullValue());
+                .body("orders", isArray()) // Проверяем, что "orders" - это массив
+                .body("orders", hasSize(greaterThanOrEqualTo(0))); // Проверяем, что в массиве есть хотя бы один заказ
     }
 }
+
+

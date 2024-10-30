@@ -7,11 +7,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import ru.yandex.praktikum.steps.OrderSteps;
 
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
 @RunWith(Parameterized.class)
 public class OrderCreateTestParameterized {
-    private OrderSteps orderSteps = new OrderSteps();
+    private OrderSteps orderSteps;
     String[] color;
 
     @Parameterized.Parameters
@@ -26,6 +26,7 @@ public class OrderCreateTestParameterized {
 
     public OrderCreateTestParameterized(String[] color) {
         this.color = color;
+        this.orderSteps = new OrderSteps();
     }
 
     @Test
@@ -36,6 +37,9 @@ public class OrderCreateTestParameterized {
                 .createOrder(color)
                 .then()
                 .statusCode(201)
-                .body("track", notNullValue());
+                .body("track", notNullValue())
+                .body("track", instanceOf(Integer.class)) // Проверка, что track - это Integer
+                .body("color", is(color)); // Проверка, что цвет соответствует переданным параметрам
     }
 }
+

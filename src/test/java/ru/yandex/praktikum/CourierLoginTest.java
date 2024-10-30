@@ -3,126 +3,103 @@ package ru.yandex.praktikum;
 import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import ru.yandex.praktikum.steps.CourierSteps;
 
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
 public class CourierLoginTest {
-    String loginCourier;
-    String passwordCourier;
 
-    private CourierSteps courier = new CourierSteps();
+    private CourierSteps courierSteps;
+    private String loginCourier;
+    private String passwordCourier;
+    private Integer courierId;
+
+
+    @Before
+    public void setUp() {
+        courierSteps = new CourierSteps();
+    }
 
     @Test
     @DisplayName("Успешная авторизация курьером")
     @Step("Создание курьера и авторизация им")
-    public void loginCourierTrue() {
-        loginCourier = randomAlphabetic(12);
-        passwordCourier = randomAlphabetic(10);
-
-        courier
-                .createCourier(loginCourier, passwordCourier, "")
-                .then()
-                .statusCode(201)
-                .body("ok", is(true));
-
-        courier
-                .loginCourier(loginCourier, passwordCourier)
-                .statusCode(200)
-                .body("id", notNullValue());
+    public void successfulCourierLogin() {
+        createAndLoginCourier();
+        // Дополнительная проверка, чтобы убедиться, что ID действительно получен
+        assertThat(courierId, is(notNullValue()));
     }
 
     @Test
     @DisplayName("Попытка авторизации с несуществующим логином")
-    @Step("Создаем курьера, но авторизуется с несуществующим логином")
-    public void loginCourierFalseLogin() {
-        loginCourier = randomAlphabetic(12);
-        passwordCourier = randomAlphabetic(10);
-
-        courier
-                .createCourier(loginCourier, passwordCourier, "")
+    @Step("Попытка авторизации с несуществующим логином")
+    public void loginWithNonExistingLogin() {
+        generateCredentials();
+        courierSteps.loginCourier(randomAlphabetic(12), passwordCourier)
                 .then()
-                .statusCode(201)
-                .body("ok", is(true));
-
-        String loginCourierFalse = randomAlphabetic(12);
-
-        courier
-                .loginCourier(loginCourierFalse, passwordCourier)
                 .statusCode(404)
-                .body("message", is("Учетная запись не найдена"));
+                .body("message", equalTo("Учетная запись не найдена"));
     }
 
     @Test
     @DisplayName("Попытка авторизации с неверным паролем")
-    @Step("Создаем курьера, но авторизуется с неверным паролем")
-    public void loginCourierFalsePassword() {
-        loginCourier = randomAlphabetic(12);
-        passwordCourier = randomAlphabetic(10);
-
-        courier
-                .createCourier(loginCourier, passwordCourier, "")
+    @Step("Попытка авторизации с неверным паролем")
+    public void loginWithWrongPassword() {
+        createAndLoginCourier();
+        courierSteps.loginCourier(loginCourier, randomAlphabetic(10))
                 .then()
-                .statusCode(201)
-                .body("ok", is(true));
-
-        String passwordCourierFalse = randomAlphabetic(10);
-
-        courier
-                .loginCourier(loginCourier, passwordCourierFalse)
                 .statusCode(404)
-                .body("message", is("Учетная запись не найдена"));
+                .body("message", equalTo("Учетная запись не найдена"));
+
     }
 
     @Test
     @DisplayName("Попытка авторизации без логина")
-    @Step("Создаем курьера, но авторизуемся без указания логина")
-    public void loginCourierFalseWithoutLogin() {
-        loginCourier = randomAlphabetic(12);
-        passwordCourier = randomAlphabetic(10);
-
-        courier
-                .createCourier(loginCourier, passwordCourier, "")
+    @Step("Попытка авторизации без логина")
+    public void loginWithoutLogin() {
+        generateCredentials();
+        courierSteps.loginCourier("", passwordCourier)
                 .then()
-                .statusCode(201)
-                .body("ok", is(true));
-
-        courier
-                .loginCourier("", passwordCourier)
                 .statusCode(400)
-                .body("message", is("Недостаточно данных для входа"));
+                .body("message", equalTo("Недостаточно данных для входа"));
     }
 
     @Test
     @DisplayName("Попытка авторизации без пароля")
-    @Step("Создаем курьера, но авторизуемся без указания пароля")
-    public void loginCourierFalseWithoutPassword() {
+    @Step("Попытка авторизации без пароля")
+    public void loginWithoutPassword() {
+        generateCredentials();
+        courierSteps.loginCourier(loginCourier, "")
+                .then()
+                .statusCode(400)
+                .body("message", equalTo("Недостаточно данных для входа"));
+    }
+
+    @After
+    public void cleanUp() {
+        if (courierId != null) {
+            courierSteps.deleteCourier(courierId.toString());
+        }
+    }
+
+
+    private void generateCredentials(){
         loginCourier = randomAlphabetic(12);
         passwordCourier = randomAlphabetic(10);
+    }
 
-        courier
-                .createCourier(loginCourier, passwordCourier, "")
+    private void createAndLoginCourier(){
+        generateCredentials();
+        courierSteps.createCourier(loginCourier, passwordCourier, "")
                 .then()
                 .statusCode(201)
                 .body("ok", is(true));
 
-        courier
-                .loginCourier(loginCourier, "")
-                .statusCode(400)
-                .body("message", is("Недостаточно данных для входа"));
-    }
-
-    @After
-    public void dataCleaning() {
-        Integer idCourier = courier.loginCourier(loginCourier, passwordCourier)
-                .extract()
-                .body()
-                .path("id");
-        if (idCourier != null) {
-            courier.deleteCourier(idCourier.toString());
-        }
+        courierId = courierSteps.loginCourier(loginCourier, passwordCourier)
+                .then()
+                .statusCode(200)
+                .extract().path("id");
     }
 }
